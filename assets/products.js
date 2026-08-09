@@ -73,3 +73,27 @@ window.HELIONYX_PRODUCTS = [{"slug": "dyson-v7", "title": "Аккумулято�
   script.setAttribute("data-xiaomi-1c-compatibility", "");
   document.head.appendChild(script);
 })();
+
+(function () {
+  function addReturnsFooterLink() {
+    if (document.querySelector('a[data-helionyx-returns-link]')) return;
+    var headings = document.querySelectorAll('.site-footer h3');
+    for (var i = 0; i < headings.length; i += 1) {
+      if (headings[i].textContent.trim() !== 'Покупателям') continue;
+      var column = headings[i].parentElement;
+      if (!column) return;
+      var link = document.createElement('a');
+      link.href = '/returns/';
+      link.textContent = 'Возврат и обмен';
+      link.setAttribute('data-helionyx-returns-link', '');
+      var privacy = Array.from(column.querySelectorAll('a')).find(function (item) {
+        return item.getAttribute('href') && item.getAttribute('href').indexOf('privacy') !== -1;
+      });
+      if (privacy) column.insertBefore(link, privacy);
+      else column.appendChild(link);
+      return;
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addReturnsFooterLink);
+  else addReturnsFooterLink();
+})();
