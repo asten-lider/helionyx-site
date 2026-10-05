@@ -1,0 +1,51 @@
+name: Ozon daily collection
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 3 * * *"  # 06:10 Moscow time
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ozon-analytics
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect Ozon
+        env:
+          OZON_CLIENT_ID: ${{ secrets.OZON_CLIENT_ID }}
+          OZON_API_KEY: ${{ secrets.OZON_API_KEY }}
+        run: python collect_daily.py
+
+      - name: Save snapshot
+        working-directory: .
+        run: |
+          DAY=$(date -u +%F)
+          mkdir -p ozon-analytics/history/$DAY
+          cp ozon-analytics/data/*.json ozon-analytics/history/$DAY/
+          git config user.name "ozon-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add ozon-analytics/history
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Ozon snapshot $DAY"
+            git push
+          fi
