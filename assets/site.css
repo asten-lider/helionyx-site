@@ -466,7 +466,8 @@ button { cursor: pointer; }
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
-.lifepo4-launch + .selection { margin-top: 0; }\n.lifepo4-launch__lead { max-width: 880px; margin: -8px 0 30px; color: var(--muted); font-size: 18px; line-height: 1.65; }
+.lifepo4-launch + .selection { margin-top: 0; }
+.lifepo4-launch__lead { max-width: 880px; margin: -8px 0 30px; color: var(--muted); font-size: 18px; line-height: 1.65; }
 .product-grid--lifepo4 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1060px; }
 .product-card--lifepo4 { box-shadow: 0 14px 38px rgba(17,24,39,.07); }
 .product-card--lifepo4 .product-card__image {
