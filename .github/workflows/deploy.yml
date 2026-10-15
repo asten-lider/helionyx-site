@@ -32,9 +32,6 @@ jobs:
       - name: Add capacity article visuals
         run: python3 deploy/enrich-capacity-article-visuals.py
 
-      - name: Replace capacity visuals with approved artwork
-        run: python3 deploy/replace-capacity-visuals.py
-
       - name: Add JSON-LD markup for content analytics
         run: python3 deploy/add-content-analytics-jsonld.py
 
