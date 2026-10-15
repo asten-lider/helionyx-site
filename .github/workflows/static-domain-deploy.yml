@@ -45,7 +45,7 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          rsync -az --delete \
+          rsync -az --delete --rsync-path="sudo -n rsync" \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'server/' \
