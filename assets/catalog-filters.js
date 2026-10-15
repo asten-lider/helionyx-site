@@ -18,7 +18,9 @@
     "xiaomi-1c-5200": { brand: "xiaomi", voltage: "14.4", capacity: 5200, batteryType: "standard" },
     "roborock-6400": { brand: "roborock", voltage: "14.4", capacity: 6400, batteryType: "extended" },
     "xiaomi-mopp-3200": { brand: "xiaomi", voltage: "14.4", capacity: 3200, batteryType: "standard" },
-    "xiaomi-1c-6400": { brand: "xiaomi", voltage: "14.4", capacity: 6400, batteryType: "extended" }
+    "xiaomi-1c-6400": { brand: "xiaomi", voltage: "14.4", capacity: 6400, batteryType: "extended" },
+    "batlfp12100": { brand: "helionyx", voltage: "12.8", capacity: 100000, batteryType: "lifepo4" },
+    "batlfp12100h": { brand: "helionyx", voltage: "12.8", capacity: 100000, batteryType: "lifepo4-heated" }
   };
 
   const tools = document.querySelector(".catalog-tools");
@@ -28,7 +30,7 @@
   const cards = Array.from(grid.querySelectorAll(".product-card"));
   cards.forEach((card, index) => {
     const button = card.querySelector("[data-product]");
-    const slug = button?.dataset.product || "";
+    const slug = card.dataset.slug || button?.dataset.product || "";
     const meta = PRODUCTS_META[slug] || {};
     const priceText = card.querySelector(".product-card__bottom strong")?.textContent || "";
     const title = card.querySelector(".product-card__title")?.textContent?.trim() || "";
@@ -56,6 +58,7 @@
         <option value="samsung">Samsung</option>
         <option value="lg">LG</option>
         <option value="roborock">Roborock</option>
+        <option value="helionyx">HELIONYX LiFePO4</option>
         <option value="other">Другие</option>
       </select>
     </div>
@@ -63,6 +66,7 @@
       <label for="catalog-voltage">Напряжение</label>
       <select id="catalog-voltage" data-catalog-voltage>
         <option value="all">Любое</option>
+        <option value="12.8">12,8 В</option>
         <option value="14.4">14,4 В</option>
         <option value="21.6">21,6 В</option>
         <option value="25.2">25,2 В</option>
@@ -83,6 +87,8 @@
         <option value="all">Все варианты</option>
         <option value="standard">Штатная ёмкость</option>
         <option value="extended">Повышенная ёмкость</option>
+        <option value="lifepo4">LiFePO4 100 А·ч</option>
+        <option value="lifepo4-heated">LiFePO4 100 А·ч с подогревом</option>
       </select>
     </div>
     <div class="catalog-filter-field catalog-filter-field--sort">
