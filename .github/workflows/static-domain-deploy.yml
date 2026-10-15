@@ -1,0 +1,54 @@
+name: One-time static domain deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/static-domain-deploy.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify old domain is gone
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD_DOMAIN="helionyx"".""store"
+          if git grep -n -I "$OLD_DOMAIN"; then
+            echo "Old domain references still exist."
+            exit 1
+          fi
+          echo "All tracked text files use helionyx.pro."
+
+      - name: Prepare SSH connection
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          ssh-keyscan -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Deploy static site to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'server/' \
+            --exclude 'deploy/' \
+            ./ "$VPS_USER@$VPS_HOST:/var/www/helionyx/"
+          ssh "$VPS_USER@$VPS_HOST" "test -f /var/www/helionyx/index.html"
