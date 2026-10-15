@@ -16,8 +16,8 @@ CSS_HREF = "../../assets/battery-data.css"
 PRODUCT_PAGE_PATTERN = re.compile(
     r'<section class="section section--soft">\s*'
     r'<div class="container product-details(?: [^"]*)?">\s*'
-    r'<div><span class="eyebrow">Совместимость</span>.*?</section>',
-    re.DOTALL,
+    r'<div><span class="eyebrow">[^<]*совместимост(?:ь|и)[^<]*</span>.*?</section>',
+    re.DOTALL | re.IGNORECASE,
 )
 GENERATED_PATTERN = re.compile(
     r'<!-- HELIONYX_BATTERY_DATA_START -->.*?'
