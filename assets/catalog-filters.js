@@ -153,9 +153,20 @@
       if (show) visible += 1;
     });
 
+    const sortablePrice = (card) => {
+      const value = Number(card.dataset.price || 0);
+      return value > 0 ? value : Number.POSITIVE_INFINITY;
+    };
     const compare = {
-      "price-asc": (a, b) => Number(a.dataset.price) - Number(b.dataset.price),
-      "price-desc": (a, b) => Number(b.dataset.price) - Number(a.dataset.price),
+      "price-asc": (a, b) => sortablePrice(a) - sortablePrice(b),
+      "price-desc": (a, b) => {
+        const ap = sortablePrice(a);
+        const bp = sortablePrice(b);
+        if (!Number.isFinite(ap) && !Number.isFinite(bp)) return 0;
+        if (!Number.isFinite(ap)) return 1;
+        if (!Number.isFinite(bp)) return -1;
+        return bp - ap;
+      },
       "capacity-desc": (a, b) => Number(b.dataset.capacity) - Number(a.dataset.capacity),
       "capacity-asc": (a, b) => Number(a.dataset.capacity) - Number(b.dataset.capacity),
       "title-asc": (a, b) => a.dataset.title.localeCompare(b.dataset.title, "ru"),
