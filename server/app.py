@@ -21,7 +21,7 @@ CLIENT_ID = os.environ.get("CDEK_CLIENT_ID", "").strip()
 CLIENT_SECRET = os.environ.get("CDEK_CLIENT_SECRET", "").strip()
 HOST = os.environ.get("HELIONYX_API_HOST", "127.0.0.1")
 PORT = int(os.environ.get("HELIONYX_API_PORT", "8787"))
-PUBLIC_URL = os.environ.get("HELIONYX_PUBLIC_URL", "https://helionyx.store").rstrip("/")
+PUBLIC_URL = os.environ.get("HELIONYX_PUBLIC_URL", "https://helionyx.pro").rstrip("/")
 DB_PATH = os.environ.get("HELIONYX_DB_PATH", "").strip()
 ADMIN_TOKEN = os.environ.get("HELIONYX_ADMIN_TOKEN", "").strip()
 CDEK_SENDER_NAME = os.environ.get("CDEK_SENDER_NAME", "HELIONYX").strip() or "HELIONYX"
@@ -930,7 +930,7 @@ def create_settlement_receipt(order):
         payload,
         idempotence_key=uuid.uuid5(
             uuid.NAMESPACE_URL,
-            "https://helionyx.store/receipts/settlement/" + order["id"],
+            "https://helionyx.pro/receipts/settlement/" + order["id"],
         ).hex,
     )
     receipt_id = str(receipt.get("id") or "")

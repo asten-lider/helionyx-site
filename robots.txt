@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://helionyx.store/sitemap.xml
+Sitemap: https://helionyx.pro/sitemap.xml

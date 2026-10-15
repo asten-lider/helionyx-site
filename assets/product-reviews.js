@@ -92,7 +92,7 @@
     section.setAttribute("data-product-reviews", "");
     section.innerHTML = '<div class="container">' +
       '<div class="product-reviews-heading">' +
-        '<div><span class="eyebrow">Проверено покупателями</span><h2>Отзывы об аккумуляторе Xiaomi Vacuum-Mop 1C</h2><p>Ниже опубликованы точные цитаты из отзывов покупателей версии 6500 мА·ч на Ozon. Орфография и пунктуация авторов сохранены. Эти отзывы оставлены на Ozon, а не на helionyx.store.</p></div>' +
+        '<div><span class="eyebrow">Проверено покупателями</span><h2>Отзывы об аккумуляторе Xiaomi Vacuum-Mop 1C</h2><p>Ниже опубликованы точные цитаты из отзывов покупателей версии 6500 мА·ч на Ozon. Орфография и пунктуация авторов сохранены. Эти отзывы оставлены на Ozon, а не на helionyx.pro.</p></div>' +
         '<div class="product-reviews-score"><span aria-hidden="true">★★★★★</span><strong>5 выбранных отзывов</strong><small>Карточка товара на Ozon: 2342 отзыва<br>Проверено 5 августа 2026 года</small></div>' +
       '</div>' +
       '<div class="product-reviews-grid">' + cards + '</div>' +
