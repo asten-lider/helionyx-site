@@ -581,3 +581,7 @@ button { cursor: pointer; }
   .gallery-main--lifepo4 { padding: 8px; border-radius: 18px; }
   .lifepo4-tech-poster { padding: 8px; border-radius: 18px; }
 }
+
+/* LiFePO4 trial batch notice */
+.lifepo4-preorder-intro { margin: 5px 0 18px; color: var(--muted); font-size: 14px; line-height: 1.65; }
+@media (max-width: 760px) { .lifepo4-preorder-intro { font-size: 13px; } }
