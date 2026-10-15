@@ -25,7 +25,11 @@ skipped = 0
 errors = []
 
 for page in sorted(ROOT.rglob("*.html")):
-    if any(part.startswith(".") for part in page.relative_to(ROOT).parts):
+    rel = page.relative_to(ROOT)
+    if any(part.startswith(".") for part in rel.parts):
+        continue
+    if len(rel.parts) == 1 and (rel.name.startswith("google") or rel.name.startswith("yandex")):
+        skipped += 1
         continue
 
     text = page.read_text(encoding="utf-8")
