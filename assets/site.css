@@ -446,3 +446,28 @@ button { cursor: pointer; }
 .checkout-city-option strong { color: var(--ink); font-size: 13px; }
 .checkout-city-option span { color: var(--muted); font-size: 11px; }
 .checkout-city-status { min-height: 17px; margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+
+
+/* HELIONYX LiFePO4 12.8V 100Ah */
+.stock--preorder { color: #0d5fff; }
+.stock--preorder::before { background: #0d5fff; }
+.stock--heated { color: #d85b00; }
+.stock--heated::before { background: #ff7a00; }
+.button--heated { color: #fff; background: #f97316; border-color: #f97316; }
+.button--heated:hover { color: #fff; background: #dd5f0b; border-color: #dd5f0b; }
+.product-card--heated { border-color: #ffd6b5; }
+.product-card--lifepo4 .product-card__image img { object-fit: cover; }
+.product-price--request { font-size: clamp(28px, 4vw, 38px); }
+.gallery-main--lifepo4 { aspect-ratio: 3 / 4; background: #f4f7fb; }
+.gallery-main--lifepo4 img { object-fit: cover; }
+.lifepo4-visual-note { margin: 11px 5px 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; }
+.spec-list--wide { width: 100%; }
+.lifepo4-launch { background: linear-gradient(135deg, #f7faff 0%, #fff8f1 100%); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.lifepo4-launch__lead { max-width: 860px; margin: -8px 0 28px; color: var(--muted); font-size: 18px; line-height: 1.65; }
+.product-grid--lifepo4 { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 920px; }
+.product-grid--lifepo4 .product-card__image { aspect-ratio: 3 / 4; }
+.lifepo4-apps { grid-template-columns: repeat(3, minmax(0,1fr)); }
+@media (max-width: 760px) {
+  .product-grid--lifepo4, .lifepo4-apps { grid-template-columns: 1fr; }
+  .lifepo4-launch__lead { font-size: 16px; }
+}
