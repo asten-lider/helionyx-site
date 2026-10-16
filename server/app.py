@@ -412,7 +412,7 @@ def delivery_quote(city_code, delivery_method, items):
 
     package = build_shipping_package(items)
     sender = resolve_city("Воронеж")
-    tariff_code = 138 if delivery_method == "cdek-pvz" else 136
+    tariff_code = 136 if delivery_method == "cdek-pvz" else 137
     result = cdek_post("/v2/calculator/tariff", {
         "type": 1,
         "tariff_code": tariff_code,
