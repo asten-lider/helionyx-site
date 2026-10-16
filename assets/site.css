@@ -585,3 +585,31 @@ button { cursor: pointer; }
 /* LiFePO4 trial batch notice */
 .lifepo4-preorder-intro { margin: 5px 0 18px; color: var(--muted); font-size: 14px; line-height: 1.65; }
 @media (max-width: 760px) { .lifepo4-preorder-intro { font-size: 13px; } }
+
+
+/* HELIONYX LiFePO4 presentation: clean studio cards (original label artwork preserved) */
+.product-card--lifepo4 .product-card__image,
+.product-card--heated .product-card__image {
+  background: #fff;
+  padding: 0;
+  aspect-ratio: 235 / 160;
+}
+.product-card--lifepo4 .product-card__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+}
+.product-card--lifepo4:hover .product-card__image img {
+  transform: scale(1.025);
+}
+.gallery-main--lifepo4,
+.product-page--heated .gallery-main--lifepo4 {
+  background: #fff;
+  padding: 0;
+}
+.gallery-main--lifepo4 img { border-radius: 0; }
+@media (max-width: 760px) {
+  .product-card--lifepo4 .product-card__image { aspect-ratio: 4 / 3; }
+}
