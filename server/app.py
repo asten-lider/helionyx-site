@@ -739,11 +739,8 @@ def create_cdek_shipment(order_id):
             "tariff_code": details["delivery_quote"]["tariff_code"],
             "shipment_point": CDEK_SHIPMENT_POINT,
             "comment": "Литий-ионный аккумулятор. UN38.3. Только наземная перевозка.",
-            "sender": {
-                "company": CDEK_SENDER_NAME,
-                "name": CDEK_SENDER_NAME,
-                "phones": [{"number": "+" + CDEK_SENDER_PHONE}],
-            },
+            # For internet-store orders, omit sender so CDEK uses the
+            # contractual sender's legal details instead of a third party.
             "recipient": {
                 "name": row["customer_name"],
                 "email": row["email"],
