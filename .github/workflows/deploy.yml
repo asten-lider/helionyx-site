@@ -38,6 +38,9 @@ jobs:
       - name: Install Yandex Metrika on every page
         run: python3 deploy/add-yandex-metrika.py
 
+      - name: Install Google Analytics 4 on public pages
+        run: python3 deploy/add-google-analytics.py
+
       - name: Prepare SSH connection
         env:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
