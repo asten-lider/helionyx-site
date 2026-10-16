@@ -736,7 +736,7 @@ def create_cdek_shipment(order_id):
         payload = {
             "type": 1,
             "number": order_id,
-            "tariff_code": details["delivery_quote"]["tariff_code"],
+            "tariff_code": 136 if delivery.get("method") == "cdek-pvz" else 137,
             "shipment_point": CDEK_SHIPMENT_POINT,
             "comment": "Литий-ионный аккумулятор. UN38.3. Только наземная перевозка.",
             # For internet-store orders, omit sender so CDEK uses the
