@@ -578,6 +578,43 @@ def db_connect():
     return connection
 
 
+
+def archive_connect():
+    """Keep correspondence in the private VPS SQLite database, never the site tree."""
+    connection = db_connect()
+    connection.execute("""CREATE TABLE IF NOT EXISTS private_deal_archives (
+        deal_id TEXT PRIMARY KEY,
+        archive_json TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""")
+    connection.commit()
+    return connection
+
+
+def read_deal_archive():
+    with archive_connect() as connection:
+        row = connection.execute("SELECT archive_json, updated_at FROM private_deal_archives WHERE deal_id = ?", ("pittar-001",)).fetchone()
+        return {"archive": json.loads(row["archive_json"]), "updated_at": row["updated_at"]} if row else {"archive": None, "updated_at": None}
+
+
+def write_deal_archive(payload):
+    if not isinstance(payload.get("events"), list) or not isinstance(payload.get("messages"), list):
+        raise ApiError("Архив должен содержать массивы events и messages", 400)
+    if len(payload["events"]) > 1000 or len(payload["messages"]) > 2000:
+        raise ApiError("Превышено число записей", 400)
+    archive = {"events": payload["events"], "messages": payload["messages"], "documents": payload.get("documents", [])}
+    if not isinstance(archive["documents"], list) or len(archive["documents"]) > 2000:
+        raise ApiError("Некорректный список документов", 400)
+    if any(not isinstance(item, dict) for group in archive.values() for item in group):
+        raise ApiError("Записи архива должны быть объектами", 400)
+    stamp = datetime.now(timezone.utc).isoformat()
+    with archive_connect() as connection:
+        connection.execute("""INSERT INTO private_deal_archives (deal_id, archive_json, updated_at)
+            VALUES (?, ?, ?) ON CONFLICT(deal_id) DO UPDATE SET archive_json=excluded.archive_json,
+            updated_at=excluded.updated_at""", ("pittar-001", json.dumps(archive, ensure_ascii=False), stamp))
+        connection.commit()
+    return stamp
+
 def new_order_id():
     return "HNX-" + datetime.now(timezone.utc).strftime("%Y%m%d") + "-" + uuid.uuid4().hex[:12].upper()
 
@@ -1047,6 +1084,13 @@ class Handler(BaseHTTPRequestHandler):
             })
             return
 
+        if parsed.path == "/api/admin/deals/pittar":
+            if not admin_authorized(self):
+                self.send_json(401, {"error": "Требуется ключ администратора"})
+                return
+            self.send_json(200, read_deal_archive())
+            return
+
         if parsed.path == "/api/admin/orders":
             if not admin_authorized(self):
                 self.send_json(401, {"error": "Требуется ключ администратора"})
@@ -1139,6 +1183,21 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self.send_json(500, {"error": "Внутренняя ошибка сервера."})
 
+    def read_archive_body(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as error:
+            raise ApiError("Некорректный запрос", 400) from error
+        if length < 2 or length > 4 * 1024 * 1024:
+            raise ApiError("Архив должен быть меньше 4 МБ", 413)
+        try:
+            payload = json.loads(self.rfile.read(length))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ApiError("Некорректный JSON", 400) from error
+        if not isinstance(payload, dict):
+            raise ApiError("Некорректный формат архива", 400)
+        return payload
+
     def read_json_body(self):
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -1161,6 +1220,14 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         try:
+            if self.path == "/api/admin/deals/pittar/import":
+                if not admin_authorized(self):
+                    raise ApiError("Требуется ключ администратора", 401)
+                archive = self.read_archive_body()
+                timestamp = write_deal_archive(archive)
+                self.send_json(200, {"ok": True, "updated_at": timestamp})
+                return
+
             if self.path == "/api/cdek/quote":
                 payload = self.read_json_body()
                 quote = delivery_quote(
