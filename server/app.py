@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import base64
 import hmac
+import ipaddress
 import json
 import math
 import os
@@ -647,8 +648,12 @@ def update_order(order_id, status, payment_id=None):
         connection.execute(
             """UPDATE orders
                SET status = ?, payment_id = COALESCE(?, payment_id), updated_at = ?
-               WHERE id = ?""",
-            (status, payment_id, now, order_id),
+               WHERE id = ?
+                 AND NOT (
+                   status IN ('fulfilled', 'refunded', 'partially_refunded')
+                   AND ? IN ('paid', 'pending', 'canceled', 'payment_error')
+                 )""",
+            (status, payment_id, now, order_id, status),
         )
         connection.commit()
 
@@ -990,7 +995,9 @@ def verify_payment(payment_id):
     status = str(payment.get("status") or "")
     if status == "succeeded" and payment.get("paid") is True:
         update_order(order_id, "paid", payment_id)
-        create_cdek_shipment_safely(order_id)
+        # A repeated payment callback must not ship an already refunded order.
+        if get_order(order_id)["status"] == "paid":
+            create_cdek_shipment_safely(order_id)
     elif status == "canceled":
         update_order(order_id, "canceled", payment_id)
     else:
@@ -1029,6 +1036,19 @@ def admin_authorized(handler):
     authorization = handler.headers.get("Authorization") or ""
     expected = "Bearer " + ADMIN_TOKEN
     return hmac.compare_digest(authorization, expected)
+
+
+def client_ip(handler):
+    """Honor forwarding headers only from a local trusted reverse proxy."""
+    peer = handler.client_address[0]
+    try:
+        if ipaddress.ip_address(peer).is_loopback:
+            claimed = (handler.headers.get("X-Real-IP") or "").strip()
+            if claimed:
+                return str(ipaddress.ip_address(claimed))
+    except ValueError:
+        pass
+    return peer
 
 
 def rate_limited(ip):
@@ -1085,6 +1105,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/deals/pittar":
+            if rate_limited(client_ip(self)):
+                self.send_json(429, {"error": "Слишком много запросов. Попробуйте через минуту."})
+                return
             if not admin_authorized(self):
                 self.send_json(401, {"error": "Требуется ключ администратора"})
                 return
@@ -1092,6 +1115,9 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/api/admin/orders":
+            if rate_limited(client_ip(self)):
+                self.send_json(429, {"error": "Слишком много запросов. Попробуйте через минуту."})
+                return
             if not admin_authorized(self):
                 self.send_json(401, {"error": "Требуется ключ администратора"})
                 return
@@ -1154,8 +1180,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "Not found"})
             return
 
-        client_ip = self.headers.get("X-Real-IP") or self.client_address[0]
-        if rate_limited(client_ip):
+        ip = client_ip(self)
+        if rate_limited(ip):
             self.send_json(429, {"error": "Слишком много запросов. Попробуйте через минуту."})
             return
 
@@ -1214,8 +1240,8 @@ class Handler(BaseHTTPRequestHandler):
         return payload
 
     def do_POST(self):
-        client_ip = self.headers.get("X-Real-IP") or self.client_address[0]
-        if rate_limited(client_ip):
+        ip = client_ip(self)
+        if rate_limited(ip):
             self.send_json(429, {"error": "Слишком много запросов. Попробуйте через минуту."})
             return
 
