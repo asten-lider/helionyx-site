@@ -23,6 +23,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check Python syntax and payment security regressions
+        run: |
+          python3 -m py_compile server/app.py
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+
       - name: Enrich all battery pages from HELIONYX catalog
         run: python3 deploy/enrich-battery-catalog-all.py
 
@@ -62,6 +67,10 @@ jobs:
             --exclude '.github/' \
             --exclude 'server/' \
             --exclude 'deploy/' \
+            --exclude 'tests/' \
+            --exclude '__pycache__/' \
+            --exclude '*.pyc' \
+            --exclude '.env*' \
             ./ "$VPS_USER@$VPS_HOST:/var/www/helionyx/"
           ssh "$VPS_USER@$VPS_HOST" "test -f /var/www/helionyx/index.html"
 
