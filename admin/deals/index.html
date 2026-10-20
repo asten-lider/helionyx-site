@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Историческая сделка 001 · HELIONYX</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#142541;background:#f4f7fc}
+*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:35px auto;padding:0 20px}
+header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}
+.brand{font-size:21px;font-weight:850;letter-spacing:.08em;color:#175cff}
+a{color:#175cff}.subtitle{color:#67768c;font-size:14px}
+.panel{background:white;border:1px solid #e1e8f3;border-radius:19px;padding:24px;box-shadow:0 8px 25px #223c6b0a;margin:14px 0}
+h1{font-size:28px;line-height:1.15;margin:8px 0}h2{margin:0 0 14px;font-size:19px}
+input,button{font:inherit;padding:12px 14px;border-radius:11px}
+input{border:1px solid #c8d4e4;min-width:0;flex:1}
+button{border:0;color:white;background:#145fff;cursor:pointer;font-weight:700}
+button.secondary{background:#eaf0fc;color:#163b80}
+.auth{display:flex;gap:10px;flex-wrap:wrap}
+.topline{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.tag{display:inline-block;background:#ebf2ff;border-radius:50px;padding:5px 11px;color:#244f99;font-size:12px;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}
+.stat{background:#f4f7fc;padding:15px;border-radius:12px}.stat strong{font-size:23px;display:block}
+.timeline{border-left:2px solid #d2e1fc;padding-left:20px;margin-left:6px}
+.entry{position:relative;padding:0 0 22px}.entry::before{content:"";position:absolute;left:-27px;top:4px;background:#145fff;border:4px solid white;width:12px;height:12px;border-radius:50%;box-shadow:0 0 0 2px #cbdcf8}
+.date{color:#667890;font-size:12px}.entry h3{margin:5px 0;font-size:16px}.entry p{margin:4px 0;line-height:1.55;white-space:pre-wrap}
+.message{border:1px solid #e2e8f1;border-radius:12px;margin:10px 0;padding:16px}
+.message summary{cursor:pointer;font-weight:700}.message pre{font:13px/1.6 system-ui;white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f7fc;padding:15px;border-radius:10px}
+.msgdate{display:block;font-size:12px;color:#687991;margin:7px 0}
+.help{font-size:13px;color:#667890;line-height:1.6}.warn{background:#fff8e9;padding:13px;border-radius:10px;color:#745624}
+#content{display:none}#notice{min-height:22px;color:#526780}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+@media(max-width:680px){.stats{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}h1{font-size:23px}}
+</style>
+</head>
+<body>
+<main>
+<header><span class="brand">HELIONYX <span style="color:#77859a">/ ARCHIVE</span></span><a href="/admin/">← Админ-панель</a></header>
+<section class="panel">
+<span class="tag">Закрытый архив · Сделка 001</span>
+<h1>Pittar Power — первая историческая сделка HELIONYX</h1>
+<p class="subtitle">Переписка, документы, решения и контроль ожидания. Данные загружаются только после серверной проверки административного ключа.</p>
+<div class="auth"><input id="token" type="password" autocomplete="current-password" aria-label="Административный ключ" placeholder="Ключ администратора"><button id="login">Открыть архив</button><button class="secondary" id="logout" type="button">Закрыть доступ</button></div>
+<p id="notice" role="status" aria-live="polite"></p>
+</section>
+<div id="content">
+<section class="panel">
+<div class="topline"><div><h2>Журнал сделки</h2><p class="subtitle" id="updated"></p></div><span class="tag" id="state">Архив</span></div>
+<div class="stats"><div class="stat"><strong id="events-count">0</strong>событий</div><div class="stat"><strong id="messages-count">0</strong>писем</div><div class="stat"><strong id="docs-count">0</strong>документов</div></div>
+<div class="timeline" id="events"></div>
+</section>
+<section class="panel"><h2>Письма и переписка</h2><div id="messages"></div></section>
+<section class="panel"><h2>Реестр документов</h2><div id="documents"></div><p class="help">Файлы и банковские реквизиты не следует помещать в публичный каталог сайта.</p></section>
+<section class="panel">
+<h2>Импорт закрытого архива</h2>
+<p class="warn">Импорт заменяет текущую версию архива. Перед заменой скачайте резервную копию. Не используйте публичный GitHub для хранения коммерческих писем.</p>
+<div class="controls"><input type="file" id="upload" accept=".json,application/json" aria-label="Выбрать файл JSON с архивом"><button id="import">Импортировать</button><button id="export" class="secondary">Скачать резервную копию</button></div>
+<p class="help">Формат JSON: {"events":[{"date":"2026-10-20","title":"Событие","description":"Описание"}],"messages":[{"date":"2026-10-20","from":"Адресат","subject":"Тема","body":"Текст письма"}],"documents":[{"date":"2026-10-20","name":"Имя файла","note":"Примечание"}]}. Максимальный размер 4 МБ.</p>
+</section>
+</div>
+</main>
+<script>
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const key=$("token");
+key.value=sessionStorage.getItem("helionyx-admin-token")||"";
+let archive={events:[],messages:[],documents:[]};
+const node=(tag,text,cls)=>{const e=document.createElement(tag);if(cls)e.className=cls;e.textContent=String(text??"");return e};
+function show(message){$("notice").textContent=message}
+async function request(url,method="GET",data=null){
+ const token=key.value.trim();
+ if(!token)throw new Error("Введите административный ключ");
+ const result=await fetch(url,{method,cache:"no-store",headers:{"Accept":"application/json","Authorization":"Bearer "+token,...(data?{"Content-Type":"application/json"}:{})},body:data?JSON.stringify(data):undefined});
+ const json=await result.json().catch(()=>({}));
+ if(!result.ok)throw new Error(json.error||"Сервер отклонил запрос");
+ return json;
+}
+function render(){
+ $("events-count").textContent=archive.events.length;
+ $("messages-count").textContent=archive.messages.length;
+ $("docs-count").textContent=archive.documents.length;
+ $("events").replaceChildren();
+ for(const item of archive.events){
+   const e=node("div","","entry");e.append(node("div",item.date||"","date"),node("h3",item.title||"Событие"),node("p",item.description||""));$("events").append(e);
+ }
+ if(!archive.events.length)$("events").append(node("p","Архив ещё не импортирован.","help"));
+ $("messages").replaceChildren();
+ for(const item of archive.messages){
+   const e=node("details","","message");e.append(node("summary",item.subject||"Без темы"),node("span",(item.date||"")+" · "+(item.from||"")+" → "+(item.to||""),"msgdate"),node("pre",item.body||""));$("messages").append(e);
+ }
+ if(!archive.messages.length)$("messages").append(node("p","Письма ещё не импортированы.","help"));
+ $("documents").replaceChildren();
+ for(const item of archive.documents){$("documents").append(node("p",(item.date?item.date+" · ":"")+(item.name||"Документ")+(item.note?" — "+item.note:"")))}
+ if(!archive.documents.length)$("documents").append(node("p","Реестр пока пуст.","help"));
+}
+async function load(){
+ try{
+  const r=await request("/api/admin/deals/pittar");
+  archive=r.archive||{events:[],messages:[],documents:[]};
+  for(const k of ["events","messages","documents"])if(!Array.isArray(archive[k]))archive[k]=[];
+  render();$("updated").textContent=r.updated_at?"Последнее обновление: "+r.updated_at:"Данные пока не загружены";
+  $("content").style.display="block";
+  sessionStorage.setItem("helionyx-admin-token",key.value.trim());
+  show("Доступ подтверждён. Архив открыт.");
+ }catch(e){$("content").style.display="none";show(e.message)}
+}
+$("login").addEventListener("click",load);
+$("logout").addEventListener("click",()=>{sessionStorage.removeItem("helionyx-admin-token");key.value="";$("content").style.display="none";archive={events:[],messages:[],documents:[]};show("Доступ закрыт.")});
+$("import").addEventListener("click",async()=>{
+ try{const file=$("upload").files[0];if(!file)throw new Error("Выберите JSON-файл");if(file.size>4*1024*1024)throw new Error("Файл больше 4 МБ");
+ const data=JSON.parse(await file.text());if(!Array.isArray(data.events)||!Array.isArray(data.messages))throw new Error("Некорректный архив");
+ if(!confirm("Заменить сохранённый архив выбранным файлом?"))return;
+ await request("/api/admin/deals/pittar/import","POST",data);$("upload").value="";await load();show("Архив сохранён в закрытой базе данных.");
+ }catch(e){show(e.message)}
+});
+$("export").addEventListener("click",()=>{const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="helionyx-pittar-001-backup.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)});
+if(key.value)load();
+})();
+</script>
+</body>
+</html>
