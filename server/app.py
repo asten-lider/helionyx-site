@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import base64
 import hmac
+import http.client
 import ipaddress
 import json
 import math
 import os
 import re
+import socket
 import sqlite3
 import threading
 import time
@@ -51,6 +53,12 @@ PAYMENTS_READY = bool(
     and YOOKASSA_RECEIPTS_ENABLED
     and DB_PATH
 )
+
+TELEGRAM_BOT_TOKEN = os.environ.get("HELIONYX_TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.environ.get("HELIONYX_TELEGRAM_CHAT_ID", "").strip()
+TELEGRAM_API_IP = os.environ.get("HELIONYX_TELEGRAM_API_IP", "").strip()
+_notification_lock = threading.Lock()
+
 
 PRODUCTS = {
     "dyson-v7": ("Аккумулятор для Dyson V7 / SV11", 3190),
@@ -571,6 +579,19 @@ def db_connect():
     for column_name in ("cdek_uuid", "cdek_number", "cdek_status", "cdek_error", "cdek_created_at"):
         if column_name not in columns:
             connection.execute("ALTER TABLE orders ADD COLUMN %s TEXT" % column_name)
+    connection.execute("""CREATE TABLE IF NOT EXISTS order_notifications (
+        order_id TEXT PRIMARY KEY,
+        sent_at TEXT,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        next_attempt_at REAL NOT NULL DEFAULT 0
+    )""")
+    notification_columns = {row["name"] for row in connection.execute(
+        "PRAGMA table_info(order_notifications)"
+    )}
+    if "attempts" not in notification_columns:
+        connection.execute("ALTER TABLE order_notifications ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
+    if "next_attempt_at" not in notification_columns:
+        connection.execute("ALTER TABLE order_notifications ADD COLUMN next_attempt_at REAL NOT NULL DEFAULT 0")
     connection.commit()
     try:
         os.chmod(DB_PATH, 0o600)
@@ -655,6 +676,13 @@ def update_order(order_id, status, payment_id=None):
                  )""",
             (status, payment_id, now, order_id, status),
         )
+        if status == "paid":
+            connection.execute(
+                """INSERT OR IGNORE INTO order_notifications (order_id, sent_at)
+                   SELECT id, NULL FROM orders
+                   WHERE id = ? AND status = 'paid'""",
+                (order_id,),
+            )
         connection.commit()
 
 
@@ -978,6 +1006,124 @@ def create_settlement_receipt(order):
         raise ApiError("ЮKassa не вернула номер второго чека")
     mark_order_fulfilled(order["id"], receipt_id)
     return receipt_id, status
+
+
+def deliver_paid_order_notification(order_id):
+    """Attempt a queued message; failures remain queued for retry."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return False
+    with _notification_lock:
+        try:
+            with db_connect() as connection:
+                # Prevent two threads delivering the same queued item concurrently.
+                now = time.time()
+                cursor = connection.execute(
+                    """UPDATE order_notifications
+                       SET next_attempt_at = ?
+                       WHERE order_id = ? AND sent_at IS NULL AND next_attempt_at <= ?""",
+                    (now + 30, order_id, now),
+                )
+                connection.commit()
+                if cursor.rowcount != 1:
+                    return False
+            order = get_order_details(order_id)
+            if not order or order["status"] not in ("paid", "fulfilled"):
+                return False
+            details = json.loads(order["details_json"])
+            lines = [
+                "✅ HELIONYX — оплачен заказ",
+                "Номер: " + order_id,
+                "Сумма: " + str(order["amount"]) + " ₽",
+                "Товары:",
+            ]
+            lines.extend(
+                "• " + str(item.get("title", "")) + " × " + str(item.get("quantity", 1))
+                for item in (details.get("items") or [])
+            )
+            lines.append("Проверь заказ в защищённой админке.")
+            payload = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": "\n".join(lines)}).encode("utf-8")
+            if TELEGRAM_API_IP:
+                # Connect to the explicitly configured IP while preserving
+                # api.telegram.org for TLS certificate verification and SNI.
+                ip = str(ipaddress.ip_address(TELEGRAM_API_IP))
+                connection = http.client.HTTPSConnection("api.telegram.org", timeout=5)
+                def connect_via_ip():
+                    raw = socket.create_connection((ip, 443), timeout=5)
+                    try:
+                        connection.sock = connection._context.wrap_socket(
+                            raw, server_hostname="api.telegram.org"
+                        )
+                    except Exception:
+                        raw.close()
+                        raise
+                connection.connect = connect_via_ip
+                try:
+                    connection.request(
+                        "POST",
+                        "/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
+                        body=payload,
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    )
+                    response = connection.getresponse()
+                    if response.status != 200:
+                        raise ValueError("Telegram API returned HTTP %s" % response.status)
+                    answer = json.loads(response.read())
+                finally:
+                    connection.close()
+            else:
+                request = Request(
+                    "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
+                    data=payload,
+                    method="POST",
+                )
+                with urlopen(request, timeout=5) as response:
+                    answer = json.load(response)
+            if not answer.get("ok"):
+                raise ValueError("Telegram rejected notification")
+            with db_connect() as connection:
+                connection.execute(
+                    """UPDATE order_notifications SET sent_at = ?
+                       WHERE order_id = ? AND sent_at IS NULL""",
+                    (datetime.now(timezone.utc).isoformat(), order_id),
+                )
+                connection.commit()
+            return True
+        except Exception as error:
+            print("Order notification failed for %s: %s" % (order_id, type(error).__name__), flush=True)
+            try:
+                with db_connect() as connection:
+                    connection.execute(
+                        """UPDATE order_notifications
+                           SET attempts = attempts + 1,
+                               next_attempt_at = ?
+                           WHERE order_id = ? AND sent_at IS NULL""",
+                        (time.time() + 60, order_id),
+                    )
+                    connection.commit()
+            except Exception as db_error:
+                print("Notification retry update failed: %s" % type(db_error).__name__, flush=True)
+            return False
+
+
+def notification_worker():
+    while True:
+        try:
+            if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID and DB_PATH:
+                with db_connect() as connection:
+                    ids = [
+                        row["order_id"] for row in connection.execute(
+                            """SELECT order_id FROM order_notifications
+                               WHERE sent_at IS NULL AND next_attempt_at <= ?
+                               ORDER BY next_attempt_at LIMIT 20""",
+                            (time.time(),),
+                        )
+                    ]
+                for order_id in ids:
+                    deliver_paid_order_notification(order_id)
+        except Exception as error:
+            print("Notification worker failed: %s" % type(error).__name__, flush=True)
+        time.sleep(30)
+
 
 
 def verify_payment(payment_id):
@@ -1350,6 +1496,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    threading.Thread(target=notification_worker, name="telegram-notifications", daemon=True).start()
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print("HELIONYX API listening on %s:%s" % (HOST, PORT), flush=True)
     server.serve_forever()
