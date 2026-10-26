@@ -1029,57 +1029,57 @@ def deliver_paid_order_notification(order_id):
             order = get_order_details(order_id)
             if not order or order["status"] not in ("paid", "fulfilled"):
                 return False
-        details = json.loads(order["details_json"])
-        lines = [
-            "✅ HELIONYX — оплачен заказ",
-            "Номер: " + order_id,
-            "Сумма: " + str(order["amount"]) + " ₽",
-            "Товары:",
-        ]
-        lines.extend(
-            "• " + str(item.get("title", "")) + " × " + str(item.get("quantity", 1))
-            for item in (details.get("items") or [])
-        )
-        lines.append("Проверь заказ в защищённой админке.")
-        payload = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": "\n".join(lines)}).encode("utf-8")
-        if TELEGRAM_API_IP:
-            # Connect to the explicitly configured IP while preserving
-            # api.telegram.org for TLS certificate verification and SNI.
-            ip = str(ipaddress.ip_address(TELEGRAM_API_IP))
-            connection = http.client.HTTPSConnection("api.telegram.org", timeout=5)
-            def connect_via_ip():
-                raw = socket.create_connection((ip, 443), timeout=5)
-                try:
-                    connection.sock = connection._context.wrap_socket(
-                        raw, server_hostname="api.telegram.org"
-                    )
-                except Exception:
-                    raw.close()
-                    raise
-            connection.connect = connect_via_ip
-            try:
-                connection.request(
-                    "POST",
-                    "/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
-                    body=payload,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                )
-                response = connection.getresponse()
-                if response.status != 200:
-                    raise ValueError("Telegram API returned HTTP %s" % response.status)
-                answer = json.loads(response.read())
-            finally:
-                connection.close()
-        else:
-            request = Request(
-                "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
-                data=payload,
-                method="POST",
+            details = json.loads(order["details_json"])
+            lines = [
+                "✅ HELIONYX — оплачен заказ",
+                "Номер: " + order_id,
+                "Сумма: " + str(order["amount"]) + " ₽",
+                "Товары:",
+            ]
+            lines.extend(
+                "• " + str(item.get("title", "")) + " × " + str(item.get("quantity", 1))
+                for item in (details.get("items") or [])
             )
-            with urlopen(request, timeout=5) as response:
-                answer = json.load(response)
-        if not answer.get("ok"):
-            raise ValueError("Telegram rejected notification")
+            lines.append("Проверь заказ в защищённой админке.")
+            payload = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": "\n".join(lines)}).encode("utf-8")
+            if TELEGRAM_API_IP:
+                # Connect to the explicitly configured IP while preserving
+                # api.telegram.org for TLS certificate verification and SNI.
+                ip = str(ipaddress.ip_address(TELEGRAM_API_IP))
+                connection = http.client.HTTPSConnection("api.telegram.org", timeout=5)
+                def connect_via_ip():
+                    raw = socket.create_connection((ip, 443), timeout=5)
+                    try:
+                        connection.sock = connection._context.wrap_socket(
+                            raw, server_hostname="api.telegram.org"
+                        )
+                    except Exception:
+                        raw.close()
+                        raise
+                connection.connect = connect_via_ip
+                try:
+                    connection.request(
+                        "POST",
+                        "/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
+                        body=payload,
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    )
+                    response = connection.getresponse()
+                    if response.status != 200:
+                        raise ValueError("Telegram API returned HTTP %s" % response.status)
+                    answer = json.loads(response.read())
+                finally:
+                    connection.close()
+            else:
+                request = Request(
+                    "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
+                    data=payload,
+                    method="POST",
+                )
+                with urlopen(request, timeout=5) as response:
+                    answer = json.load(response)
+            if not answer.get("ok"):
+                raise ValueError("Telegram rejected notification")
             with db_connect() as connection:
                 connection.execute(
                     """UPDATE order_notifications SET sent_at = ?
