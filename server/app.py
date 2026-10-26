@@ -1019,7 +1019,7 @@ def notify_paid_order(order_id):
                 for item in (details.get("items") or [])
             )
             lines.append("Проверь заказ в защищённой админке.")
-            payload = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": "\\n".join(lines)}).encode("utf-8")
+            payload = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": "\n".join(lines)}).encode("utf-8")
             if TELEGRAM_API_IP:
                 # Connect to the explicitly configured IP while preserving
                 # api.telegram.org for TLS certificate verification and SNI.
