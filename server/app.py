@@ -52,6 +52,11 @@ PAYMENTS_READY = bool(
     and DB_PATH
 )
 
+TELEGRAM_BOT_TOKEN = os.environ.get("HELIONYX_TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.environ.get("HELIONYX_TELEGRAM_CHAT_ID", "").strip()
+_notification_lock = threading.Lock()
+
+
 PRODUCTS = {
     "dyson-v7": ("Аккумулятор для Dyson V7 / SV11", 3190),
     "dyson-v6": ("Аккумулятор для Dyson V6", 3090),
@@ -980,6 +985,57 @@ def create_settlement_receipt(order):
     return receipt_id, status
 
 
+def notify_paid_order(order_id):
+    """Best-effort notification. Never interrupt payment confirmation or shipment."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    with _notification_lock:
+        try:
+            with db_connect() as connection:
+                connection.execute(
+                    "CREATE TABLE IF NOT EXISTS order_notifications "
+                    "(order_id TEXT PRIMARY KEY, sent_at TEXT NOT NULL)"
+                )
+                already_sent = connection.execute(
+                    "SELECT 1 FROM order_notifications WHERE order_id = ?", (order_id,)
+                ).fetchone()
+                if already_sent:
+                    return
+            order = get_order_details(order_id)
+            if not order or order["status"] not in ("paid", "fulfilled"):
+                return
+            details = json.loads(order["details_json"])
+            lines = [
+                "✅ HELIONYX — оплачен заказ",
+                "Номер: " + order_id,
+                "Сумма: " + str(order["amount"]) + " ₽",
+                "Товары:",
+            ]
+            lines.extend(
+                "• " + str(item.get("title", "")) + " × " + str(item.get("quantity", 1))
+                for item in (details.get("items") or [])
+            )
+            lines.append("Проверь заказ в защищённой админке.")
+            payload = urlencode({"chat_id": TELEGRAM_CHAT_ID, "text": "\\n".join(lines)}).encode("utf-8")
+            request = Request(
+                "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
+                data=payload,
+                method="POST",
+            )
+            with urlopen(request, timeout=5) as response:
+                answer = json.load(response)
+            if not answer.get("ok"):
+                raise ValueError("Telegram rejected notification")
+            with db_connect() as connection:
+                connection.execute(
+                    "INSERT OR IGNORE INTO order_notifications (order_id, sent_at) VALUES (?, ?)",
+                    (order_id, datetime.now(timezone.utc).isoformat()),
+                )
+                connection.commit()
+        except Exception as error:
+            print("Order notification failed for %s: %s" % (order_id, type(error).__name__), flush=True)
+
+
 def verify_payment(payment_id):
     payment = yookassa_request("GET", "/payments/" + payment_id)
     order_id = str((payment.get("metadata") or {}).get("order_id") or "")
@@ -995,6 +1051,7 @@ def verify_payment(payment_id):
     status = str(payment.get("status") or "")
     if status == "succeeded" and payment.get("paid") is True:
         update_order(order_id, "paid", payment_id)
+        notify_paid_order(order_id)
         # A repeated payment callback must not ship an already refunded order.
         if get_order(order_id)["status"] == "paid":
             create_cdek_shipment_safely(order_id)
