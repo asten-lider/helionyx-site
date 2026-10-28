@@ -5,6 +5,7 @@ This export is not a stock-management system. Validate current stock and prices
 before submitting the resulting feed to Yandex.
 """
 import argparse
+import csv
 import datetime as dt
 import json
 import re
@@ -30,7 +31,32 @@ def product_data(page):
 def add(parent, tag, value):
     return ET.SubElement(parent, tag).__setattr__("text", str(value))
 
-def generate(root, output):
+def load_inventory(path):
+    if not path or not path.is_file():
+        raise ValueError('Verified inventory CSV required: --inventory FILE (sku,price_rub,stock)')
+    with path.open(encoding='utf-8-sig', newline='') as fp:
+        reader = csv.DictReader(fp)
+        if reader.fieldnames != ['sku', 'price_rub', 'stock']:
+            raise ValueError('Expected CSV columns: sku,price_rub,stock')
+        records = {}
+        for row in reader:
+            sku = row['sku'].strip()
+            if not sku or sku in records:
+                raise ValueError('Empty or duplicate SKU in inventory')
+            if row['stock'] not in ('in_stock', 'out_of_stock'):
+                raise ValueError(f'{sku}: stock must be in_stock or out_of_stock')
+            try:
+                price = int(row['price_rub'])
+            except (ValueError, TypeError):
+                raise ValueError(f'{sku}: price must be integer RUB')
+            if price <= 0:
+                raise ValueError(f'{sku}: price must be positive')
+            records[sku] = (price, row['stock'] == 'in_stock')
+    return records
+
+
+def generate(root, output, inventory_path):
+    verified = load_inventory(inventory_path)
     products = sorted((root / "products").glob("*/index.html"))
     if len(products) != 19:
         raise ValueError(f"Expected 19 products, found {len(products)}")
@@ -60,9 +86,10 @@ def generate(root, output):
         price = offer["price"]
         if isinstance(price, bool) or not isinstance(price, (float,int)) or price <= 0:
             raise ValueError(f"{slug}: invalid price")
-        status = AVAILABILITY.get(offer.get("availability"))
-        if status is None:
-            raise ValueError(f"{slug}: unrecognized availability")
+        if str(p.get("sku")) not in verified:
+            raise ValueError(f"{slug}: missing verified inventory row")
+        price, in_stock = verified[str(p["sku"])]
+        status = "true" if in_stock else "false"
         images = p.get("image", [])
         if isinstance(images, str):
             images = [images]
@@ -82,8 +109,8 @@ def generate(root, output):
         add(entry, "vendor", p.get("brand", {}).get("name", "HELIONYX"))
         add(entry, "vendorCode", sku)
         add(entry, "description", p.get("description", ""))
-    if len(offers) != 17:
-        raise ValueError(f"Expected 17 priced products, got {len(offers)}")
+    if len(offers) != 17 or len(verified) != 17:
+        raise ValueError(f"Expected 17 verified products, got offers={len(offers)}, inventory={len(verified)}")
     if len({x.attrib["id"] for x in offers}) != len(offers):
         raise ValueError("Duplicate product SKU in feed")
     ET.indent(catalog, space="  ")
@@ -95,5 +122,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--inventory", type=Path, required=True, help="Owner-verified current SKU, price and stock CSV")
     args = parser.parse_args()
-    generate(args.root, args.output)
+    generate(args.root, args.output, args.inventory)
