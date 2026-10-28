@@ -5,6 +5,7 @@ on:
       - 'products/**'
       - 'tools/build-yandex-yml.py'
       - '.github/workflows/yandex-yml-validation.yml'
+      - 'data/yandex-verified-*.csv'
   workflow_dispatch:
 permissions:
   contents: read
@@ -41,4 +42,20 @@ jobs:
           assert all(float(o.findtext('price'))>0 for o in offers)
           assert all(o.find('picture') is not None for o in offers)
           print('YANDEX YML VALIDATION: PASS (CI sample values only, NOT verified inventory)')
+          PY
+
+      - name: Validate 14 confirmed local-stock offers without publishing
+        run: |
+          python3 tools/build-yandex-yml.py --inventory data/yandex-verified-2026-10-28.csv --output /tmp/helionyx-yandex-local-preview.yml
+          python3 - <<'PY'
+          import csv
+          import xml.etree.ElementTree as ET
+          with open('data/yandex-verified-2026-10-28.csv') as f:
+              expected={r['sku']:r['price_rub'] for r in csv.DictReader(f)}
+          offers=ET.parse('/tmp/helionyx-yandex-local-preview.yml').getroot().findall('./shop/offers/offer')
+          actual={o.attrib['id']:o.findtext('price') for o in offers}
+          assert len(offers)==14 and len(actual)==14 and actual==expected, (actual,expected)
+          assert all(o.attrib['available']=='true' for o in offers)
+          print('LOCAL STOCK PREVIEW PASS: 14 confirmed items, 3 unknown excluded')
+          print('NOT PUBLISHED: site and checkout price verification still required')
           PY

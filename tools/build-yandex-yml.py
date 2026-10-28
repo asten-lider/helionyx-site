@@ -58,6 +58,7 @@ def load_inventory(path):
 def generate(root, output, inventory_path):
     verified = load_inventory(inventory_path)
     products = sorted((root / "products").glob("*/index.html"))
+    seen = set()
     if len(products) != 19:
         raise ValueError(f"Expected 19 products, found {len(products)}")
     catalog = ET.Element("yml_catalog", {"date": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M")})
@@ -87,7 +88,9 @@ def generate(root, output, inventory_path):
         if isinstance(price, bool) or not isinstance(price, (float,int)) or price <= 0:
             raise ValueError(f"{slug}: invalid price")
         if str(p.get("sku")) not in verified:
-            raise ValueError(f"{slug}: missing verified inventory row")
+            excluded.append(slug + " (unverified stock)")
+            continue
+        seen.add(str(p["sku"]))
         price, in_stock = verified[str(p["sku"])]
         status = "true" if in_stock else "false"
         images = p.get("image", [])
@@ -109,14 +112,14 @@ def generate(root, output, inventory_path):
         add(entry, "vendor", p.get("brand", {}).get("name", "HELIONYX"))
         add(entry, "vendorCode", sku)
         add(entry, "description", p.get("description", ""))
-    if len(offers) != 17 or len(verified) != 17:
-        raise ValueError(f"Expected 17 verified products, got offers={len(offers)}, inventory={len(verified)}")
+    if len(offers) != len(verified) or not offers or seen != set(verified):
+        raise ValueError(f"Inventory mismatch: offers={len(offers)}, verified={len(verified)}, unknown SKUs={sorted(set(verified)-seen)}")
     if len({x.attrib["id"] for x in offers}) != len(offers):
         raise ValueError("Duplicate product SKU in feed")
     ET.indent(catalog, space="  ")
     output.parent.mkdir(parents=True, exist_ok=True)
     ET.ElementTree(catalog).write(output, encoding="utf-8", xml_declaration=True)
-    print(f"YML OK: {len(offers)} offers; excluded unpriced: {', '.join(excluded)}")
+    print(f"YML OK: {len(offers)} offers; excluded: {', '.join(excluded)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
