@@ -1,0 +1,25 @@
+name: Audit battery compatibility records
+on:
+  pull_request:
+    paths:
+      - 'deploy/helionyx-batteries-*.json'
+      - 'products/**'
+      - 'tools/audit-compatibility.py'
+      - '.github/workflows/compatibility-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare source compatibility and product metadata
+        run: |
+          python3 tools/audit-compatibility.py
+          cat docs/compatibility-audit.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: helionyx-compatibility-audit
+          path: docs/compatibility-audit.md
