@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "scope": "SKU aliases only; not device compatibility",
+  "confirmation": "Explicitly confirmed by HELIONYX owner in conversation on 2026-10-28",
+  "items": [
+    {
+      "slug": "dyson-v7",
+      "source_sku": "BATDYSV7",
+      "current_sku": "BATDYSV7_2500",
+      "confirmed": true
+    },
+    {
+      "slug": "dyson-v6",
+      "source_sku": "BATDYSV6",
+      "current_sku": "BATDYSV6_2500",
+      "confirmed": true
+    },
+    {
+      "slug": "dyson-v11",
+      "source_sku": "BATDYSV11",
+      "current_sku": "BATDYSV11_4000",
+      "confirmed": true
+    },
+    {
+      "slug": "mop2-3200",
+      "source_sku": "BATMOP2",
+      "current_sku": "BATMOP2_3200",
+      "confirmed": true
+    },
+    {
+      "slug": "mop2-lite",
+      "source_sku": "BATMOP2LITE",
+      "current_sku": "BATMOP2LITE3200",
+      "confirmed": true
+    },
+    {
+      "slug": "xiaomi-g1",
+      "source_sku": "BAT1G3200",
+      "current_sku": "BATG1_3200",
+      "confirmed": true
+    },
+    {
+      "slug": "xiaomi-mopp-3200",
+      "source_sku": "BATMOPP",
+      "current_sku": "BATMOPP3200",
+      "confirmed": true
+    },
+    {
+      "slug": "exvac-3200",
+      "source_sku": "BATEXVAC660",
+      "current_sku": "BATEXVAC660_3200",
+      "confirmed": true
+    }
+  ]
+}
