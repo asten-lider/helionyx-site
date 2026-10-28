@@ -19,7 +19,7 @@ for row in records:
     slug = row["slug"]
     page = ROOT / "products" / slug / "index.html"
     html = page.read_text(encoding="utf-8")
-    blocks = [json.loads(text) for text in re.findall(r'<script[^>]*type="application/ld\\+json"[^>]*>(.*?)</script>', html, re.S)]
+    blocks = [json.loads(text) for text in re.findall(r'<script[^>]*type="application/ld[+]json"[^>]*>(.*?)</script>', html, re.S)]
     products = [p for p in blocks if p.get("@type") == "Product"]
     if len(products) != 1:
         raise SystemExit(f"{slug}: expected exactly one Product JSON-LD")
