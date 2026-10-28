@@ -1,0 +1,28 @@
+name: Validate internal selector preview
+on:
+  pull_request:
+    paths:
+      - 'tools/build-selector-preview.py'
+      - '.github/workflows/internal-selector-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static selector preview
+        run: |
+          python3 tools/build-selector-preview.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('internal/selector-preview.html')
+          s=p.read_text()
+          assert s.count('BATDYSV7_2500') >= 1
+          assert 'P1904-4S1P-MM' in s
+          assert 'noindex,nofollow' in s
+          assert 'Физическая проверка не проведена' in s
+          assert '</html>' in s
+          print('PREVIEW: PASS')
+          PY
