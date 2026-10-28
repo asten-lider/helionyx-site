@@ -18,8 +18,16 @@ assert len(records) == 17
 assert len({x["slug"] for x in records}) == len(records)
 
 def tokens(value):
-    # Source fields are comma-delimited; don't split "/" or semicolons that can be part of model names.
-    return list(dict.fromkeys(v.strip() for v in str(value or "").split(",") if v.strip()))
+    # Source JSON stores arrays; preserve each array entry (including commas inside model names).
+    if value is None:
+        return []
+    if isinstance(value, list):
+        entries = value
+    elif isinstance(value, str):
+        entries = value.split(",")
+    else:
+        raise TypeError(f"Unexpected compatibility field type: {type(value).__name__}")
+    return list(dict.fromkeys(v.strip() for v in entries if isinstance(v, str) and v.strip()))
 
 def get_product(slug):
     html = (ROOT / "products" / slug / "index.html").read_text(encoding="utf-8")
