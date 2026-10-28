@@ -1,0 +1,33 @@
+name: Validate HELIONYX compatibility matrix
+on:
+  pull_request:
+    paths:
+      - 'tools/build-compatibility-matrix.py'
+      - 'data/confirmed-sku-aliases.json'
+      - 'deploy/helionyx-batteries-*.json'
+      - 'products/**'
+      - '.github/workflows/compatibility-matrix.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          python3 tools/build-compatibility-matrix.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("data/compatibility-matrix-review.json").read_text())
+          products=data["products"]
+          assert len(products)==17
+          assert all(p["sku_alias_confirmed"] for p in products)
+          assert all(p["physical_fit_verified"] is False for p in products)
+          print("MATRIX: PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-matrix-review
+          path: data/compatibility-matrix-review.json
