@@ -1,0 +1,28 @@
+name: Validate OpenAI product feed
+on:
+  pull_request:
+    paths:
+      - 'products/**'
+      - 'tools/build-openai-feed.py'
+      - '.github/workflows/openai-feed-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate discovery feed without publishing
+        run: |
+          python3 tools/build-openai-feed.py --output /tmp/helionyx-openai-products.jsonl
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(line) for line in Path('/tmp/helionyx-openai-products.jsonl').read_text().splitlines()]
+          assert len(rows)==17, f'Expected 17 priced products, got {len(rows)}'
+          assert len({p['item_id'] for p in rows})==len(rows)
+          assert all(p['price'].endswith(' RUB') and p['url'].startswith('https://helionyx.pro/products/') for p in rows)
+          assert all(p['is_eligible_checkout'] is False and p['is_ads_eligible'] is False for p in rows)
+          print('FEED VALIDATION: PASS')
+          PY
