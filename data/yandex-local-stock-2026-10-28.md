@@ -13,10 +13,10 @@ Owner provided *two* stock columns: Ozon quantity and own local warehouse quanti
 - BATLGA9: 83 local units; site price 3390 RUB
 - BATMOP2_3200: 8 local units; site price 1990 RUB
 - BATG1_3200: 168 local units; site price 2090 RUB
-- BATJET90: 117 local units; site price 4890 RUB
+- BATJET90: 117 local units; site price 4790 RUB
 - BATDYSV6_2500: 77 local units; site price 3090 RUB
 - BATDYSV7_2500: 40 local units; site price 3190 RUB
 
 **Excluded:** BATMOP2LITE3200 (no local count), BATMOPP3200 (no local count), BATDYSV11_4000 (not in provided stock list). Unknown is not the same as zero; these offers are omitted, not marked available.
 
-This is a dated snapshot, **not a live inventory integration**. Before publishing or re-exporting, confirm current local quantities and the live site price, especially BATJET90 (owner-approved 4890 RUB; site may still show 4790 RUB). Never publish a YML price different from the corresponding product page and checkout price. Do not submit a feed unless that match is verified. Ozon warehouse units are deliberately not used.
+This is a dated snapshot, **not a live inventory integration**. Before publishing or re-exporting, confirm current local quantities and the live site price, especially BATJET90 (owner-confirmed 4790 RUB). Never publish a YML price different from the corresponding product page and checkout price. Do not submit a feed unless that match is verified. Ozon warehouse units are deliberately not used.
