@@ -1,0 +1,31 @@
+name: Validate Yandex YML feed
+on:
+  pull_request:
+    paths:
+      - 'products/**'
+      - 'tools/build-yandex-yml.py'
+      - '.github/workflows/yandex-yml-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and validate YML
+        run: |
+          python3 tools/build-yandex-yml.py --output /tmp/helionyx-yandex.yml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root=ET.parse('/tmp/helionyx-yandex.yml').getroot()
+          assert root.tag=='yml_catalog'
+          offers=root.findall('./shop/offers/offer')
+          assert len(offers)==17, len(offers)
+          assert len({o.attrib['id'] for o in offers})==17
+          assert all(o.findtext('url').startswith('https://helionyx.pro/products/') for o in offers)
+          assert all(o.findtext('currencyId')=='RUB' for o in offers)
+          assert all(float(o.findtext('price'))>0 for o in offers)
+          assert all(o.find('picture') is not None for o in offers)
+          print('YANDEX YML VALIDATION: PASS')
+          PY
