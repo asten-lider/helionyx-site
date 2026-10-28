@@ -1,10 +1,13 @@
 name: Deploy HELIONYX to VPS
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      deploy_api:
+        description: 'Explicitly deploy backend API (may restart payment service)'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -62,7 +65,7 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          rsync -rlz --delete \
+          rsync -rlz \
             --exclude '.git/' \
             --exclude '.github/' \
             --exclude 'server/' \
@@ -75,6 +78,7 @@ jobs:
           ssh "$VPS_USER@$VPS_HOST" "test -f /var/www/helionyx/index.html"
 
       - name: Deploy CDEK API
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_api == true
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
