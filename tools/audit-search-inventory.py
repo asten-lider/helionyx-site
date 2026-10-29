@@ -12,6 +12,7 @@ CSV = ROOT / "data/yandex-verified-2026-10-28.csv"
 with CSV.open(encoding="utf-8", newline="") as src:
     confirmed = {r["sku"]: r for r in csv.DictReader(src)}
 problems = []
+fulfillable_without_count = []
 priced = 0
 for path in sorted((ROOT / "products").glob("*/index.html")):
     html = path.read_text(encoding="utf-8")
@@ -28,16 +29,18 @@ for path in sorted((ROOT / "products").glob("*/index.html")):
     priced += 1
     if sku not in confirmed:
         if offer.get("availability") == "https://schema.org/InStock":
-            problems.append(f"{sku}: website says InStock; no confirmed local warehouse count")
+            fulfillable_without_count.append(sku)
     else:
         if int(offer["price"]) != int(confirmed[sku]["price_rub"]):
             problems.append(f"{sku}: website price differs from approved feed")
         if offer.get("availability") != "https://schema.org/InStock":
             problems.append(f"{sku}: warehouse has stock but page is not marked InStock")
 print(f"Audited {priced} priced product pages; {len(confirmed)} approved local-stock offers")
+for sku in fulfillable_without_count:
+    print("INFO:", sku, "has no reported local count; owner says a unit can be sourced for an order")
 for problem in problems:
     print("REVIEW:", problem)
 if problems:
     print("WARNING: SEO inventory discrepancies require owner review before changes.")
 else:
-    print("PASS: pages and approved local-stock snapshot are aligned.")
+    print("PASS: prices of confirmed stock align; sourcing-only items are not treated as out of stock.")
