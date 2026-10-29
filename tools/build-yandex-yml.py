@@ -43,8 +43,8 @@ def load_inventory(path):
             sku = row['sku'].strip()
             if not sku or sku in records:
                 raise ValueError('Empty or duplicate SKU in inventory')
-            if row['stock'] not in ('in_stock', 'out_of_stock'):
-                raise ValueError(f'{sku}: stock must be in_stock or out_of_stock')
+            if row['stock'] not in ('in_stock', 'out_of_stock', 'source_on_order'):
+                raise ValueError(f'{sku}: stock must be in_stock, out_of_stock or source_on_order')
             try:
                 price = int(row['price_rub'])
             except (ValueError, TypeError):
