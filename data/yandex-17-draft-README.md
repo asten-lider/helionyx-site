@@ -1,0 +1,1 @@
+17-SKU Yandex draft: the 14 local-stock SKUs remain available=true. Dyson V11, Mop 2 Lite, and Mop P are marked source_on_order and will be exported available=false until fulfillment/lead time and site checkout are checked. Never overwrite public 14-SKU feed with this draft without explicit validation. Ozon stock is excluded.
