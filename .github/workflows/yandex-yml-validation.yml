@@ -6,6 +6,7 @@ on:
       - 'tools/build-yandex-yml.py'
       - '.github/workflows/yandex-yml-validation.yml'
       - 'data/yandex-verified-*.csv'
+      - 'data/yandex-17-draft-*.csv'
   workflow_dispatch:
 permissions:
   contents: read
@@ -86,3 +87,17 @@ jobs:
           path: /tmp/helionyx-yandex-local-preview.yml
           retention-days: 14
 
+
+      - name: Validate owner-confirmed 17-SKU full draft
+        run: |
+          python3 tools/build-yandex-yml.py --inventory data/yandex-17-draft-2026-10-29.csv --output /tmp/helionyx-yandex-17.yml
+          python3 - <<'PY'
+          import csv, xml.etree.ElementTree as ET
+          with open('data/yandex-17-draft-2026-10-29.csv',encoding='utf-8') as f:
+              expected={r['sku']:r['price_rub'] for r in csv.DictReader(f)}
+          offers=ET.parse('/tmp/helionyx-yandex-17.yml').findall('./shop/offers/offer')
+          actual={o.attrib['id']:o.findtext('price') for o in offers}
+          assert len(offers)==17 and actual==expected
+          assert all(o.attrib['available']=='true' for o in offers)
+          print('PASS: 17 available offers, matching approved prices')
+          PY
