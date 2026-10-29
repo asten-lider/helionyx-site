@@ -59,3 +59,30 @@ jobs:
           print('LOCAL STOCK PREVIEW PASS: 14 confirmed items, 3 unknown excluded')
           print('NOT PUBLISHED: site and checkout price verification still required')
           PY
+      - name: Verify all YML prices against product page JSON-LD
+        run: |
+          python3 - <<'PY'
+          import csv, importlib.util
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location('feed','tools/build-yandex-yml.py')
+          module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+          pages={}
+          for path in Path('products').glob('*/index.html'):
+              product=module.product_data(path)
+              offer=product.get('offers') or {}
+              if offer.get('price'):
+                  pages[str(product['sku'])]=int(offer['price'])
+          with open('data/yandex-verified-2026-10-28.csv',encoding='utf-8') as src:
+              rows=list(csv.DictReader(src))
+          for row in rows:
+              assert row['sku'] in pages, row['sku']
+              assert int(row['price_rub'])==pages[row['sku']], (row['sku'],row['price_rub'],pages[row['sku']])
+          print(f'PAGE PRICE PARITY PASS: {len(rows)} verified product prices')
+          PY
+      - name: Save unpublished YML preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helionyx-yandex-local-14-preview
+          path: /tmp/helionyx-yandex-local-preview.yml
+          retention-days: 14
+
